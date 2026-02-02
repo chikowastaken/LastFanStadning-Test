@@ -600,7 +600,10 @@ router.post(
 
 /**
  * GET /api/quiz/:id/results
- * Get user's quiz results (only AFTER submission - safe to show answers)
+ * Get user's quiz results (only AFTER submission)
+ * 
+ * SECURITY: Correct answers are only revealed AFTER quiz.end_at
+ * This prevents users from sharing answers with others during the quiz window
  */
 router.get(
   "/:id/results",
@@ -644,7 +647,12 @@ router.get(
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      // 3. Get questions WITH correct answers (safe - user submitted)
+      // 3. SECURITY CHECK: Only reveal correct answers after quiz.end_at
+      const now = new Date();
+      const quizEndTime = new Date(quiz.end_at);
+      const answersRevealed = now >= quizEndTime;
+
+      // 4. Get questions - conditionally include correct_answer
       const { data: questions } = await supabaseAdmin
         .from("questions")
         .select(
@@ -653,18 +661,64 @@ router.get(
         .eq("quiz_id", quizId)
         .order("order_index");
 
-      // 4. Get user's answers
+      // 5. Get user's answers
       const { data: userAnswers } = await supabaseAdmin
         .from("user_answers")
         .select("*")
         .eq("submission_id", submission.id);
 
-      res.json({
-        quiz,
-        submission,
-        questions: questions || [],
-        userAnswers: userAnswers || [],
-      });
+      // 6. SECURITY: If answers not revealed, only send minimal data
+      if (answersRevealed) {
+        // After quiz ends: send full data including correct answers
+        res.json({
+          quiz,
+          submission,
+          questions: questions || [],
+          userAnswers: userAnswers || [],
+          answersRevealed: true,
+          answersRevealTime: quiz.end_at,
+          serverTime: now.toISOString(),
+        });
+      } else {
+        // Before quiz ends: send questions and user's answers, but NOT correct_answer, is_correct, or points_earned
+        const safeQuestions = (questions || []).map((q) => ({
+          id: q.id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          options: q.options,
+          points: q.points,
+          order_index: q.order_index,
+          // correct_answer is NOT included
+        }));
+
+        const safeUserAnswers = (userAnswers || []).map((a) => ({
+          id: a.id,
+          submission_id: a.submission_id,
+          question_id: a.question_id,
+          answer: a.answer,
+          // is_correct is NOT included
+          // points_earned is NOT included
+        }));
+
+        res.json({
+          quiz,
+          submission: {
+            id: submission.id,
+            quiz_id: submission.quiz_id,
+            user_id: submission.user_id,
+            total_score: submission.total_score,
+            is_late: submission.is_late,
+            submitted_at: submission.submitted_at,
+            started_at: submission.started_at,
+            duration_seconds: submission.duration_seconds,
+          },
+          questions: safeQuestions,
+          userAnswers: safeUserAnswers,
+          answersRevealed: false,
+          answersRevealTime: quiz.end_at,
+          serverTime: now.toISOString(),
+        });
+      }
     } catch (error) {
       console.error("Error fetching quiz results:", error);
       res.status(500).json({ error: "Internal server error" });

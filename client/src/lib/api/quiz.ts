@@ -145,7 +145,7 @@ export interface QuizResultsResponse {
     day_number: number;
   };
   submission: QuizSubmission;
-  questions: Array<QuizQuestion & { correct_answer: string }>;
+  questions: Array<QuizQuestion & { correct_answer?: string }>; // correct_answer only present after quiz ends
   userAnswers: Array<{
     id: string;
     submission_id: string;
@@ -154,6 +154,9 @@ export interface QuizResultsResponse {
     is_correct: boolean;
     points_earned: number;
   }>;
+  answersRevealed: boolean; // true if quiz.end_at has passed
+  answersRevealTime: string; // ISO timestamp when answers will be revealed
+  serverTime: string; // Server's current time
 }
 
 // ============ API Functions ============

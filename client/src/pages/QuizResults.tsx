@@ -52,6 +52,28 @@ function formatSubmissionTime(utcIso: string | null): string {
   return `${day}.${month}.${year}, ${hours}:${minutes}`;
 }
 
+/**
+ * Format reveal time to readable format in Georgia timezone
+ */
+function formatRevealTime(utcIso: string): string {
+  const dt = new Date(utcIso);
+  // Convert UTC to Georgia time (UTC+4)
+  const ge = new Date(dt.getTime() + 4 * 60 * 60 * 1000);
+
+  const day = ge.getUTCDate();
+  const monthIndex = ge.getUTCMonth();
+  const hours = String(ge.getUTCHours()).padStart(2, "0");
+  const minutes = String(ge.getUTCMinutes()).padStart(2, "0");
+
+  // Georgian month abbreviations
+  const georgianMonths = [
+    "იან", "თებ", "მარ", "აპრ", "მაი", "ივნ",
+    "ივლ", "აგვ", "სექ", "ოქტ", "ნოე", "დეკ"
+  ];
+
+  return `${day} ${georgianMonths[monthIndex]} ${hours}:${minutes}`;
+}
+
 // ============ Main Component ============
 
 export default function QuizResults() {
@@ -188,7 +210,7 @@ export default function QuizResults() {
     );
   }
 
-  const { quiz, submission, questions } = results;
+  const { quiz, submission, questions, answersRevealed, answersRevealTime } = results;
 
   return (
     <Layout>
@@ -226,101 +248,146 @@ export default function QuizResults() {
                 <p className="text-4xl font-display font-bold text-primary">
                   {submission.total_score}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  {stats.correct} / {stats.total} სწორი ({stats.percentage}%)
-                </p>
+                {/* Only show correct/total when answers are revealed */}
+                {answersRevealed && (
+                  <p className="text-sm text-muted-foreground">
+                    {stats.correct} / {stats.total} სწორი ({stats.percentage}%)
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="p-3 rounded-lg bg-secondary/30 text-center">
+            {/* Stats Row - Only show when answers revealed */}
+            {answersRevealed ? (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="p-3 rounded-lg bg-secondary/30 text-center">
+                  <Clock className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">გაგზავნის დრო</p>
+                  <p className="font-medium text-sm">{formatSubmissionTime(submission.submitted_at)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-secondary/30 text-center">
+                  <Trophy className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">ქულა/კითხვა</p>
+                  <p className="font-medium">{pointsPerCorrect} ქულა</p>
+                </div>
+              </div>
+            ) : (
+              /* Before answers revealed - show submission time only */
+              <div className="mt-4 p-3 rounded-lg bg-secondary/30 text-center">
                 <Clock className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">გაგზავნის დრო</p>
                 <p className="font-medium text-sm">{formatSubmissionTime(submission.submitted_at)}</p>
               </div>
-              <div className="p-3 rounded-lg bg-secondary/30 text-center">
-                <Trophy className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">ქულა/კითხვა</p>
-                <p className="font-medium">{pointsPerCorrect} ქულა</p>
+            )}
+
+            {/* Answers Reveal Notice */}
+            {!answersRevealed && answersRevealTime && (
+              <div className="mt-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                  <Clock className="w-4 h-4 inline-block mr-1 -mt-0.5" />
+                  დეტალური შედეგები და სწორი პასუხები გამოჩნდება {formatRevealTime(answersRevealTime)} საათზე
+                </p>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Questions Review */}
-        <div className="space-y-4">
-          {questions.map((q, i) => {
-            const userAnswer = answersByQuestionId[q.id];
-            const isCorrect = userAnswer?.is_correct || false;
+        {questions.length > 0 && (
+          <div className="space-y-4">
+            {questions.map((q, i) => {
+              const userAnswer = answersByQuestionId[q.id];
+              const isCorrect = userAnswer?.is_correct;
+              const hasCorrectInfo = typeof isCorrect === 'boolean'; // Only true after answers revealed
 
-            return (
-              <Card
-                key={q.id}
-                variant="default"
-                className={`border-l-4 ${isCorrect ? "border-l-success" : "border-l-destructive"
+              return (
+                <Card
+                  key={q.id}
+                  variant="default"
+                  className={`border-l-4 ${
+                    hasCorrectInfo
+                      ? isCorrect
+                        ? "border-l-success"
+                        : "border-l-destructive"
+                      : "border-l-cyan-500" // Blue/cyan color before reveal
                   }`}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">
-                      კითხვა {i + 1}. {q.question_text}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isCorrect ? (
-                        <CheckCircle className="w-5 h-5 text-success" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-destructive" />
-                      )}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg">
+                        კითხვა {i + 1}. {q.question_text}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {hasCorrectInfo ? (
+                          // After reveal: show correct/wrong icon
+                          isCorrect ? (
+                            <CheckCircle className="w-5 h-5 text-success" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-destructive" />
+                          )
+                        ) : (
+                          // Before reveal: show neutral clock/pending icon
+                          <Clock className="w-5 h-5 text-cyan-500" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-accent">
-                    {userAnswer?.points_earned || 0} / {pointsPerCorrect} ქულა
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {/* User's Answer */}
-                  <div
-                    className={`p-3 rounded-lg ${isCorrect
-                        ? "bg-success/10 border border-success/20"
-                        : "bg-destructive/10 border border-destructive/20"
+                    {/* Only show points per question after answers revealed */}
+                    {hasCorrectInfo && (
+                      <p className="text-sm text-accent">
+                        {userAnswer?.points_earned || 0} / {pointsPerCorrect} ქულა
+                      </p>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {/* User's Answer */}
+                    <div
+                      className={`p-3 rounded-lg ${
+                        hasCorrectInfo
+                          ? isCorrect
+                            ? "bg-success/10 border border-success/20"
+                            : "bg-destructive/10 border border-destructive/20"
+                          : "bg-cyan-500/10 border border-cyan-500/20" // Blue/cyan style before reveal
                       }`}
-                  >
-                    <p className="text-sm text-muted-foreground">თქვენი პასუხი:</p>
-                    <p className="font-medium">{userAnswer?.answer || "—"}</p>
-                  </div>
-
-                  {/* Correct Answer (if wrong) */}
-                  {!isCorrect && (
-                    <div className="p-3 rounded-lg bg-success/10 border border-success/20">
-                      <p className="text-sm text-muted-foreground">სწორი პასუხი:</p>
-                      <p className="font-medium text-success">{q.correct_answer}</p>
+                    >
+                      <p className="text-sm text-muted-foreground">თქვენი პასუხი:</p>
+                      <p className="font-medium">{userAnswer?.answer || "—"}</p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+
+                    {/* Correct Answer (only shown after reveal and if wrong) */}
+                    {hasCorrectInfo && !isCorrect && q.correct_answer && (
+                      <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                        <p className="text-sm text-muted-foreground">სწორი პასუხი:</p>
+                        <p className="font-medium text-success">{q.correct_answer}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 mt-8">
           <Button
             variant="secondary"
-            className="flex-1"
+            className={answersRevealed ? "flex-1" : "w-full"}
             onClick={handleBackToDashboard}
           >
             <ArrowLeft className="w-5 h-5 mr-1" />
             დაბრუნება
           </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={handlePractice}
-          >
-            <RotateCcw className="w-5 h-5 mr-1" />
-            პრაქტიკა
-          </Button>
+          {/* Practice button only available after answers are revealed */}
+          {answersRevealed && (
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handlePractice}
+            >
+              <RotateCcw className="w-5 h-5 mr-1" />
+              პრაქტიკა
+            </Button>
+          )}
         </div>
       </div>
     </Layout>
