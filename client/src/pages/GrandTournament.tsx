@@ -126,8 +126,8 @@ export default function GrandTournament() {
     "@type": "Event",
     "name": "გრანდ ტურნირი - LastFanStanding",
     "description": "მასშტაბური ქვიზ ტურნირი 10,000₾ საპრიზო ფონდით",
-    "startDate": "2026-02-28T21:00:00+04:00",
-    "endDate": "2026-02-28T21:20:00+04:00",
+    "startDate": "2026-02-27T21:00:00+04:00",
+    "endDate": "2026-02-27T21:20:00+04:00",
     "eventStatus": "https://schema.org/EventScheduled",
     "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
     "location": {
@@ -153,7 +153,7 @@ export default function GrandTournament() {
     <div className="min-h-screen bg-background">
       <SEO
         title="გრანდ ტურნირი - მოიგე 10,000 ლარი | LastFanStanding"
-        description="მიიღე მონაწილეობა გრანდ ტურნირში შაბათს, 28 თებერვალს. იბრძოლე 10,000 ლარიანი საპრიზო ფონდისთვის. დაამტკიცე შენი ცოდნა, გაიარე რეგისტრაცია და გახდი საუკეთესო ჩცდ-ს ფანი. მონაწილეობის საფასური - 6.7 ლარი"
+        description="მიიღე მონაწილეობა გრანდ ტურნირში შაბათს, 27 თებერვალს. იბრძოლე 10,000 ლარიანი საპრიზო ფონდისთვის. დაამტკიცე შენი ცოდნა, გაიარე რეგისტრაცია და გახდი საუკეთესო ჩცდ-ს ფანი. მონაწილეობის საფასური - 6.7 ლარი"
         structuredData={structuredData}
       />
       {/* Header */}
@@ -225,7 +225,7 @@ export default function GrandTournament() {
                   </span>
                 </div>
                 <CountdownTimer
-                  targetDate={new Date("2026-02-28T21:00:00")}
+                  targetDate={new Date("2026-02-27T21:00:00")}
                   label=""
                 />
                 <p className="mt-6 text-sm text-muted-foreground text-center">
@@ -726,7 +726,7 @@ export default function GrandTournament() {
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             დარეგისტრირდით ახლავე, მოემზადეთ და გამოიყენეთ შანსი 10,000₾-იანი
-            საპრიზო ფონდის მოსაგებად. გამოწვევა იწყება 28 თებერვალს 21:00
+            საპრიზო ფონდის მოსაგებად. გამოწვევა იწყება 27 თებერვალს 21:00
             საათზე.
           </p>
 

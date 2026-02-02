@@ -305,7 +305,7 @@ export default function Terms() {
                 <Calendar className="w-8 h-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">თარიღი</h3>
                 <p className="text-sm text-primary font-bold">
-                  28 თებერვალი, 2026
+                  27 თებერვალი, 2026
                 </p>
                 <p className="text-xs text-muted-foreground">შაბათი</p>
               </CardContent>

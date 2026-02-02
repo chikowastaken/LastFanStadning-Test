@@ -167,7 +167,7 @@ export default function Landing() {
           <Link to="/grand-tournament" className="block w-full max-w-6xl mx-auto">
             <img
               src="/images/grand-quiz-banner.png"
-              alt="Grand Quiz - Win 10,000 - Saturday, 28th of February"
+              alt="Grand Quiz - Win 10,000 - Saturday, 27th of February"
               className="w-full h-auto object-contain rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
             />
           </Link>
