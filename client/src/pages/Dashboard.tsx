@@ -63,7 +63,11 @@ export default function Dashboard() {
   }, [setSearchParams]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    // Don't redirect if we're still processing OAuth callback (tokens in URL hash)
+    const hasAuthTokens = window.location.hash.includes('access_token') || 
+                          window.location.hash.includes('refresh_token');
+    
+    if (!authLoading && !user && !hasAuthTokens) {
       navigate("/");
     }
   }, [user, authLoading, navigate]);
