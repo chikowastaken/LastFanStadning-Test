@@ -52,7 +52,7 @@ export default function Profile() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [username, setUsername] = useState("");
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -90,17 +90,27 @@ export default function Profile() {
       if (profileRes.error && profileRes.error.code === 'PGRST116') {
         console.log("Profile not found, creating automatically...");
 
-        // Generate default username from email or user ID
-        const defaultUsername = user.email?.split('@')[0] || `User${user.id.substring(0, 8)}`;
+        // Get user metadata from Google OAuth
+        const metadata = user.user_metadata || {};
+        const fullName = metadata.full_name || metadata.name || null;
+        const firstName = metadata.given_name || (fullName ? fullName.split(' ')[0] : null);
+        const lastName = metadata.family_name || (fullName && fullName.split(' ').length > 1 ? fullName.split(' ').slice(1).join(' ') : null);
 
-        // Create the profile
+        // Generate default username from full name, email, or user ID
+        const defaultUsername = fullName || user.email?.split('@')[0] || `User${user.id.substring(0, 8)}`;
+
+        // Create the profile with all fields from Google OAuth
         const { error: insertError } = await supabase
           .from("profiles")
           .insert({
             id: user.id,
             username: defaultUsername,
+            email: user.email || null,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: fullName,
+            avatar_url: metadata.avatar_url || metadata.picture || null,
             total_points: 0,
-            avatar_url: null,
           });
 
         if (insertError) {
@@ -174,7 +184,7 @@ export default function Profile() {
 
     try {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
-      
+
       // Get quiz submissions with quiz dates
       const { data: submissions, error: submissionsError } = await supabase
         .from("quiz_submissions")
@@ -330,7 +340,7 @@ export default function Profile() {
         const totalQuestions = questions?.length || 0;
 
         // Find best score
-        const bestSubmission = submissions.reduce((best, current) => 
+        const bestSubmission = submissions.reduce((best, current) =>
           current.total_score > best.total_score ? current : best
         );
 
@@ -439,7 +449,7 @@ export default function Profile() {
     } catch (error: unknown) {
       console.error("Error updating username:", error);
       let errorMessage = "მომხმარებლის სახელის განახლება ვერ მოხერხდა";
-      
+
       if (error && typeof error === 'object' && 'code' in error) {
         const err = error as { code?: string; message?: string };
         if (err.code === "23505" || err.message?.includes("unique") || err.message?.includes("duplicate")) {
