@@ -1,0 +1,29 @@
+{
+  "name": "LastFanStanding - ჩცდ ქვიზები",
+  "short_name": "LFS",
+  "description": "ყოველდღიური ქვიზები ჩემი ცოლის დაქალებზე. შეეჯიბრე მეგობრებს და მოიგე პრიზები!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#14b8a6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "games", "education"],
+  "lang": "ka-GE",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}
