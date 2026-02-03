@@ -180,7 +180,7 @@ export default function Quiz() {
     } catch (error: unknown) {
       console.error("Error loading quiz info:", error);
       const errorMessage = error instanceof Error ? error.message : "ქვიზის ჩატვირთვა ვერ მოხერხდა";
-      
+
       // Handle specific error cases
       if (errorMessage.includes("NOT_FOUND") || errorMessage.includes("ვერ მოიძებნა")) {
         toast({
@@ -472,8 +472,8 @@ export default function Quiz() {
                 <CardContent className="space-y-2">
                   <div
                     className={`p-3 rounded-lg ${r.is_correct
-                        ? "bg-success/10 border border-success/20"
-                        : "bg-destructive/10 border border-destructive/20"
+                      ? "bg-success/10 border border-success/20"
+                      : "bg-destructive/10 border border-destructive/20"
                       }`}
                   >
                     <p className="text-sm text-muted-foreground">თქვენი პასუხი:</p>
@@ -634,10 +634,10 @@ export default function Quiz() {
               key={q.id}
               onClick={() => handleQuestionDotClick(idx)}
               className={`w-3 h-3 rounded-full transition-colors ${idx === currentQuestionIndex
-                  ? "bg-primary"
-                  : answers[q.id]?.trim()
-                    ? "bg-success"
-                    : "bg-muted"
+                ? "bg-primary"
+                : answers[q.id]?.trim()
+                  ? "bg-accent"
+                  : "bg-muted"
                 }`}
               aria-label={`კითხვა ${idx + 1}`}
             />

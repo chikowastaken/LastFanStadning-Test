@@ -808,12 +808,12 @@ export default function TournamentQuiz() {
                 onClick={() => handleQuestionDotClick(idx)}
                 disabled={isLocked}
                 className={`w-3 h-3 rounded-full transition-colors ${
-                  isCurrent 
-                    ? 'bg-primary cursor-default' 
+                  isCurrent
+                    ? 'bg-primary cursor-default'
                     : isLocked
-                      ? 'bg-success opacity-50 cursor-not-allowed'
-                      : hasAnswer 
-                        ? 'bg-success cursor-pointer' 
+                      ? 'bg-accent opacity-50 cursor-not-allowed'
+                      : hasAnswer
+                        ? 'bg-accent cursor-pointer'
                         : 'bg-muted cursor-pointer'
                 }`}
                 aria-label={`კითხვა ${idx + 1}${isLocked ? ' (დაბლოკილი)' : ''}`}
