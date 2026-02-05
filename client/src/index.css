@@ -158,6 +158,22 @@
     }
   }
 
+  /* Top 5 tournament winners glow animation */
+  .animate-top5-glow {
+    animation: top5-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes top5-glow {
+    0%, 100% {
+      box-shadow: 0 0 15px hsl(38 92% 50% / 0.3);
+      background-color: hsl(38 92% 50% / 0.05);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(38 92% 50% / 0.5);
+      background-color: hsl(38 92% 50% / 0.1);
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }

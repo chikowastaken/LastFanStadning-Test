@@ -40,6 +40,7 @@ export interface Tournament {
   tournament_starts_at: string | null;
   tournament_ends_at: string | null;
   quiz_type: string;
+  results_released: boolean;
 }
 
 // ============ Quiz API ============
@@ -152,5 +153,11 @@ export const adminTournamentApi = {
   delete: (id: string) => apiRequest<{ success: boolean }>(`/api/admin/tournaments/${id}`, {
     method: "DELETE",
   }),
+
+  toggleResultsReleased: (id: string, results_released: boolean) =>
+    apiRequest<{ tournament: Tournament }>(`/api/admin/tournaments/${id}/results-released`, {
+      method: "PATCH",
+      body: JSON.stringify({ results_released }),
+    }),
 };
 

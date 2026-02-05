@@ -268,10 +268,10 @@ router.post('/:id/submit', requireAuth, strictRateLimit, async (req: AuthRequest
       };
     });
 
-    // 6. Calculate duration using SERVER timestamps
+    // 6. Calculate duration from TOURNAMENT START (not user start) using SERVER timestamps
     const submittedAt = new Date();
-    const startedAt = new Date(submission.started_at);
-    const durationSeconds = Math.floor((submittedAt.getTime() - startedAt.getTime()) / 1000);
+    const tournamentStartsAt = new Date(quiz.tournament_starts_at);
+    const durationSeconds = Math.floor((submittedAt.getTime() - tournamentStartsAt.getTime()) / 1000);
 
     // 7. ATOMIC UPDATE: Update submission ONLY if not already submitted (race condition protection)
     const { data: updatedSubmission, error: updateError } = await supabaseAdmin
@@ -345,7 +345,7 @@ router.post('/:id/submit', requireAuth, strictRateLimit, async (req: AuthRequest
 });
 
 // GET /api/tournament/:id/results
-// Returns tournament results with correct answers (only after submission)
+// Returns tournament results - conditional based on results_released flag
 router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) => {
   const { id: quizId } = req.params;
   const userId = req.user!.id;
@@ -364,16 +364,16 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
     }
 
     if (!submission.submitted_at) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'You have not submitted this tournament yet',
         code: 'NOT_SUBMITTED'
       });
     }
 
-    // 2. Get quiz info
+    // 2. Get quiz info including results_released flag
     const { data: quiz, error: quizError } = await supabaseAdmin
       .from('quizzes')
-      .select('id, title, tournament_prize_gel')
+      .select('id, title, tournament_prize_gel, results_released, tournament_starts_at')
       .eq('id', quizId)
       .single();
 
@@ -381,7 +381,57 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    // 3. Get questions WITH correct answers (safe - user submitted)
+    const resultsReleased = quiz.results_released || false;
+
+    // 3. Get user's answers
+    const { data: answersData } = await supabaseAdmin
+      .from('tournament_answers')
+      .select('answers')
+      .eq('quiz_id', quizId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const userAnswers = (answersData?.answers || {}) as Record<string, string>;
+
+    // Calculate duration from tournament start
+    const submittedAt = new Date(submission.submitted_at);
+    const tournamentStartsAt = new Date(quiz.tournament_starts_at);
+    const durationFromStart = Math.floor((submittedAt.getTime() - tournamentStartsAt.getTime()) / 1000);
+
+    // ========== RESULTS NOT RELEASED ==========
+    if (!resultsReleased) {
+      // Get questions WITHOUT correct answers
+      const { data: questions } = await supabaseAdmin
+        .from('questions')
+        .select('id, question_text, order_index')
+        .eq('quiz_id', quizId)
+        .order('order_index');
+
+      // Return user's answers without correct/incorrect indicators
+      const questionsWithAnswersOnly = (questions || []).map((q) => ({
+        id: q.id,
+        question_text: q.question_text,
+        order_index: q.order_index,
+        user_answer: userAnswers[q.id] || '',
+        // NO correct_answer, NO is_correct, NO points_earned
+      }));
+
+      return res.json({
+        quiz: {
+          id: quiz.id,
+          title: quiz.title,
+          tournament_prize_gel: quiz.tournament_prize_gel,
+        },
+        resultsReleased: false,
+        durationSeconds: durationFromStart,
+        submittedAt: submission.submitted_at,
+        questions: questionsWithAnswersOnly,
+        // NO leaderboard, NO score, NO userRank
+      });
+    }
+
+    // ========== RESULTS RELEASED ==========
+    // Get questions WITH correct answers
     const { data: questions, error: questionsError } = await supabaseAdmin
       .from('questions')
       .select('id, question_text, correct_answer, points, order_index')
@@ -392,21 +442,11 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
       return res.status(500).json({ error: 'Failed to fetch questions' });
     }
 
-    // 4. Get user's answers
-    const { data: answersData, error: answersError } = await supabaseAdmin
-      .from('tournament_answers')
-      .select('answers')
-      .eq('quiz_id', quizId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const userAnswers = answersData?.answers || {};
-
-    // 5. Calculate is_correct for each answer (server-side)
+    // Calculate is_correct for each answer (server-side)
     const questionsWithResults = (questions || []).map((q) => {
       const userAnswer = (userAnswers[q.id] || '').trim().toLowerCase();
       const correctAnswer = q.correct_answer.trim().toLowerCase();
-      const is_correct = userAnswer === correctAnswer;
+      const is_correct = userAnswer === correctAnswer && userAnswer.length > 0;
 
       return {
         id: q.id,
@@ -420,17 +460,36 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
       };
     });
 
-    // 6. Get leaderboard
+    // Get TOP 50 leaderboard
     const { data: leaderboardData } = await supabaseAdmin.rpc('get_tournament_leaderboard', {
       p_quiz_id: quizId,
+      p_limit: 50,
+    });
+
+    // Get user's rank (in case they're outside top 50)
+    const { data: userRankData } = await supabaseAdmin.rpc('get_user_tournament_rank', {
+      p_quiz_id: quizId,
+      p_user_id: userId,
     });
 
     res.json({
-      quiz,
-      submission,
+      quiz: {
+        id: quiz.id,
+        title: quiz.title,
+        tournament_prize_gel: quiz.tournament_prize_gel,
+      },
+      resultsReleased: true,
+      durationSeconds: durationFromStart,
+      submittedAt: submission.submitted_at,
+      submission: {
+        id: submission.id,
+        total_score: submission.total_score,
+        submitted_at: submission.submitted_at,
+      },
       questions: questionsWithResults,
-      userAnswers: userAnswers,
+      userAnswers,
       leaderboard: leaderboardData || [],
+      userRank: userRankData?.[0] || null,
     });
   } catch (error) {
     console.error('Error fetching tournament results:', error);

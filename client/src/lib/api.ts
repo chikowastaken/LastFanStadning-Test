@@ -68,29 +68,40 @@ export const tournamentApi = {
         title: string;
         tournament_prize_gel: number | null;
       };
-      submission: {
+      resultsReleased: boolean;
+      durationSeconds: number;
+      submittedAt: string;
+      // Only present when resultsReleased = true
+      submission?: {
         id: string;
         total_score: number;
-        duration_seconds: number;
         submitted_at: string;
       };
       questions: Array<{
         id: string;
         question_text: string;
-        correct_answer: string;
-        points: number;
         order_index: number;
         user_answer: string;
-        is_correct: boolean;
-        points_earned: number;
+        // Only present when resultsReleased = true
+        correct_answer?: string;
+        points?: number;
+        is_correct?: boolean;
+        points_earned?: number;
       }>;
-      userAnswers: Record<string, string>;
-      leaderboard: Array<{
+      userAnswers?: Record<string, string>;
+      // Only present when resultsReleased = true
+      leaderboard?: Array<{
         user_id: string;
         total_score: number;
-        duration_seconds: number;
+        submitted_at: string; // Changed from duration_seconds
         rank: number;
       }>;
+      userRank?: {
+        user_id: string;
+        total_score: number;
+        submitted_at: string;
+        rank: number;
+      } | null;
     }>(`/api/tournament/${quizId}/results`),
 
   getState: (quizId: string) =>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Lock, Unlock, Trash2, Calendar } from "lucide-react";
+import { Loader2, Plus, Pencil, Lock, Unlock, Trash2, Calendar, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { georgiaLocalToUtcIso, utcIsoToGeorgiaLocalInput, getNextSaturdayDefaults } from "@/lib/timezone";
 import { inputBase, buttonPrimary, buttonSecondary, buttonDestructive, cardBase, listContainer, listHeader } from "@/lib/admin-styles";
@@ -22,6 +22,7 @@ type TournamentRow = {
     tournament_ends_at: string | null;
     start_at: string;
     end_at: string;
+    results_released: boolean;
 };
 
 export default function AdminTournaments() {
@@ -32,6 +33,7 @@ export default function AdminTournaments() {
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [toggling, setToggling] = useState<string | null>(null);
+    const [togglingResults, setTogglingResults] = useState<string | null>(null);
 
     // Form state
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -208,6 +210,25 @@ export default function AdminTournaments() {
         toast({ title: "Info", description: "Tournaments don't use lock status" });
     }, [toast]);
 
+    const toggleResultsReleased = useCallback(async (t: TournamentRow) => {
+        setTogglingResults(t.id);
+        try {
+            await adminTournamentApi.toggleResultsReleased(t.id, !t.results_released);
+            await fetchTournaments();
+            toast({
+                title: t.results_released ? "შედეგები დამალულია" : "შედეგები გამოქვეყნდა",
+                description: t.results_released
+                    ? "მოთამაშეები ვეღარ ხედავენ ლიდერბორდს"
+                    : "მოთამაშეებს შეუძლიათ ნახონ შედეგები"
+            });
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "შეცდომა";
+            toast({ variant: "destructive", title: "შეცდომა", description: errorMessage });
+        } finally {
+            setTogglingResults(null);
+        }
+    }, [fetchTournaments, toast]);
+
     return (
         <Layout>
             <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
@@ -366,12 +387,17 @@ export default function AdminTournaments() {
                                     className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                                 >
                                     <div>
-                                        <div className="font-semibold flex items-center gap-2">
+                                        <div className="font-semibold flex items-center gap-2 flex-wrap">
                                             🏆 {t.title}
                                             {t.is_locked && <Lock className="w-4 h-4 text-warning" />}
                                             {t.tournament_prize_gel != null && (
                                                 <span className="text-sm font-normal text-muted-foreground">
                                                     • {t.tournament_prize_gel}₾
+                                                </span>
+                                            )}
+                                            {t.results_released && (
+                                                <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded">
+                                                    შედეგები გამოქვეყნებულია
                                                 </span>
                                             )}
                                         </div>
@@ -388,13 +414,29 @@ export default function AdminTournaments() {
                                         <button
                                             className={buttonSecondary}
                                             onClick={() => startEdit(t)}
+                                            title="რედაქტირება"
                                         >
                                             <Pencil className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            className={t.results_released ? buttonPrimary : buttonSecondary}
+                                            onClick={() => toggleResultsReleased(t)}
+                                            disabled={togglingResults === t.id}
+                                            title={t.results_released ? "შედეგების დამალვა" : "შედეგების გამოქვეყნება"}
+                                        >
+                                            {togglingResults === t.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : t.results_released ? (
+                                                <EyeOff className="w-4 h-4" />
+                                            ) : (
+                                                <Eye className="w-4 h-4" />
+                                            )}
                                         </button>
                                         <button
                                             className={buttonSecondary}
                                             onClick={() => toggleLock(t)}
                                             disabled={toggling === t.id}
+                                            title="ჩაკეტვა"
                                         >
                                             {toggling === t.id ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -408,6 +450,7 @@ export default function AdminTournaments() {
                                             className={buttonDestructive}
                                             onClick={() => deleteTournament(t.id)}
                                             disabled={deleting === t.id}
+                                            title="წაშლა"
                                         >
                                             {deleting === t.id ? (
                                                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -340,5 +340,28 @@ router.delete('/tournaments/:id', strictRateLimit, async (req: AuthRequest, res:
   }
 });
 
+// PATCH /api/admin/tournaments/:id/results-released
+// Toggle results_released flag for a tournament
+router.patch('/tournaments/:id/results-released', strictRateLimit, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { results_released } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('quizzes')
+      .update({ results_released: Boolean(results_released) })
+      .eq('id', id)
+      .eq('quiz_type', 'tournament')
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ tournament: data });
+  } catch (error: any) {
+    console.error('Error toggling results release:', error);
+    res.status(500).json({ error: error.message || 'Failed to toggle results release' });
+  }
+});
+
 export default router;
 
