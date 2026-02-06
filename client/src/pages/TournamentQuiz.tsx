@@ -60,7 +60,6 @@ export default function TournamentQuiz() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [attemptStarted, setAttemptStarted] = useState(false);
-  const [lockedQuestions, setLockedQuestions] = useState<Set<number>>(new Set()); // Questions that have been answered and moved past
   const [tournamentState, setTournamentState] = useState<{
     state: 'NOT_STARTED' | 'REGISTRATION_OPEN' | 'REGISTRATION_CLOSED' | 'ACTIVE' | 'ENDED' | 'ALREADY_SUBMITTED';
     isRegistered: boolean;
@@ -179,19 +178,8 @@ export default function TournamentQuiz() {
           // Restore saved answers if they exist (resume functionality)
           if (questionsData.savedAnswers && Object.keys(questionsData.savedAnswers).length > 0) {
             setAnswers(questionsData.savedAnswers);
-            
-            // Lock all questions that have saved answers (user already answered and moved past them)
-            // This maintains the "no going back" behavior after refresh
-            const savedQuestionIds = Object.keys(questionsData.savedAnswers);
-            const lockedIndices = new Set<number>();
-            questionsData.questions.forEach((q, idx) => {
-              if (savedQuestionIds.includes(q.id) && questionsData.savedAnswers![q.id]?.trim()) {
-                lockedIndices.add(idx);
-              }
-            });
-            setLockedQuestions(lockedIndices);
           }
-          
+
           setAttemptStarted(true);
         } catch (error: unknown) {
           // If API fails (e.g., tournament ended), show error
@@ -241,18 +229,8 @@ export default function TournamentQuiz() {
       // Restore saved answers if resuming (should be empty on first start)
       if (questionsData.savedAnswers && Object.keys(questionsData.savedAnswers).length > 0) {
         setAnswers(questionsData.savedAnswers);
-        
-        // Lock all questions that have saved answers (user already answered and moved past them)
-        const savedQuestionIds = Object.keys(questionsData.savedAnswers);
-        const lockedIndices = new Set<number>();
-        questionsData.questions.forEach((q, idx) => {
-          if (savedQuestionIds.includes(q.id) && questionsData.savedAnswers![q.id]?.trim()) {
-            lockedIndices.add(idx);
-          }
-        });
-        setLockedQuestions(lockedIndices);
       }
-      
+
       setAttemptStarted(true);
       toast({ title: "ტურნირი დაიწყო!", description: "წარმატებას გისურვებთ!" });
     } catch (error: unknown) {
@@ -318,13 +296,14 @@ export default function TournamentQuiz() {
     try {
       // Sanitize answers before sending
       const sanitizedAnswers = sanitizeAnswers(answers);
-      
-      // Use secure API endpoint - server calculates score, no correct_answer exposed
-      const result = await tournamentApi.submit(id, sanitizedAnswers);
 
-      const message = isAutoSubmit 
-        ? `დრო ამოიწურა! თქვენ მოაგროვეთ ${result.score} ქულა`
-        : `თქვენ მოაგროვეთ ${result.score} ქულა!`;
+      // Use secure API endpoint - server calculates score, no correct_answer exposed
+      await tournamentApi.submit(id, sanitizedAnswers);
+
+      // Don't show score in toast - results are hidden until admin releases them
+      const message = isAutoSubmit
+        ? "დრო ამოიწურა! თქვენი პასუხები გაიგზავნა"
+        : "თქვენი პასუხები წარმატებით გაიგზავნა!";
 
       toast({ title: isAutoSubmit ? "ავტომატური გაგზავნა" : "ტურნირი გაგზავნილია!", description: message });
       navigate(`/tournament/${id}/results`);
@@ -408,75 +387,21 @@ export default function TournamentQuiz() {
   }, [quiz?.tournament_ends_at, submission, attemptStarted, handleSubmit]);
 
   const handleNext = () => {
-    // Check if current question has an answer
-    if (!currentQuestion) return;
-    
-    const currentAnswer = answers[currentQuestion.id];
-    const hasAnswer = currentAnswer && currentAnswer.trim().length > 0;
-    
-    if (!hasAnswer) {
-      toast({
-        variant: "destructive",
-        title: "პასუხი საჭიროა",
-        description: "გთხოვთ აირჩიოთ პასუხი სანამ შემდეგ კითხვაზე გადახვალთ",
-      });
-      return;
-    }
-    
-    // Lock current question (prevent going back)
-    setLockedQuestions(prev => new Set([...prev, currentQuestionIndex]));
-    
-    // Move to next question
+    // Move to next question freely without any restrictions
     if (!isLastQuestion) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
   const handleBack = () => {
-    // Prevent going back to locked questions
-    if (lockedQuestions.has(currentQuestionIndex - 1)) {
-      toast({
-        variant: "destructive",
-        title: "უკან დაბრუნება შეუძლებელია",
-        description: "თქვენ უკვე უპასუხეთ ამ კითხვას და გადახვედით შემდეგზე",
-      });
-      return;
-    }
-    
+    // Move to previous question freely without any restrictions
     if (!isFirstQuestion) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
   const handleQuestionDotClick = (index: number) => {
-    // Prevent clicking on locked questions
-    if (lockedQuestions.has(index)) {
-      toast({
-        variant: "destructive",
-        title: "კითხვაზე დაბრუნება შეუძლებელია",
-        description: "თქვენ უკვე უპასუხეთ ამ კითხვას და გადახვედით შემდეგზე",
-      });
-      return;
-    }
-    
-    // Prevent skipping ahead without answering current question
-    if (index > currentQuestionIndex && currentQuestion) {
-      const currentAnswer = answers[currentQuestion.id];
-      const hasAnswer = currentAnswer && currentAnswer.trim().length > 0;
-      
-      if (!hasAnswer) {
-        toast({
-          variant: "destructive",
-          title: "პასუხი საჭიროა",
-          description: "გთხოვთ აირჩიოთ პასუხი სანამ შემდეგ კითხვაზე გადახვალთ",
-        });
-        return;
-      }
-      
-      // Lock current question when skipping ahead
-      setLockedQuestions(prev => new Set([...prev, currentQuestionIndex]));
-    }
-    
+    // Jump to any question freely without restrictions
     setCurrentQuestionIndex(index);
   };
 
@@ -623,21 +548,47 @@ export default function TournamentQuiz() {
 
   // Tournament is ACTIVE - show start screen or quiz
   if (!attemptStarted) {
+    // Calculate prize vouchers (divide by 100)
+    const prizeVouchers = quiz.tournament_prize_gel ? Math.floor(quiz.tournament_prize_gel / 100) : 0;
+    // Get points per question (use first question's points or default to 10)
+    const pointsPerQuestion = questions.length > 0 ? questions[0].points : 10;
+
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8 max-w-lg">
-          <Card variant="elevated">
-            <CardHeader className="text-center">
-              <Trophy className="w-12 h-12 text-primary mx-auto mb-4" />
-              <CardTitle>{quiz.title}</CardTitle>
-              {quiz.description && <p className="text-muted-foreground mt-2">{quiz.description}</p>}
-              {quiz.tournament_prize_gel && (
-                <Badge variant="secondary" className="mt-2">
-                  პრიზი: {quiz.tournament_prize_gel} ₾
-                </Badge>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <Card
+            variant="elevated"
+            className="relative overflow-hidden border-2 border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
+          >
+            {/* Hero section with trophy and prize - matching TournamentCard */}
+            <div className="relative bg-gradient-to-b from-primary/15 via-primary/5 to-transparent pt-8 pb-6 px-6">
+              <div className="flex flex-col items-center text-center">
+                {/* Glowing Trophy */}
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 blur-2xl bg-amber-400/30 rounded-full scale-150" />
+                  <Trophy className="w-20 h-20 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.5)] relative z-10" />
+                </div>
+
+                {/* Title and Description */}
+                <CardTitle className="text-xl font-display font-bold mb-2">{quiz.title}</CardTitle>
+                {quiz.description && (
+                  <p className="text-sm text-muted-foreground mb-4">{quiz.description}</p>
+                )}
+
+                {/* Fancy Prize Display with Shimmer */}
+                {quiz.tournament_prize_gel && (
+                  <div className="relative overflow-hidden bg-amber-500/10 border border-amber-400/40 rounded-xl px-6 py-3">
+                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" style={{ backgroundSize: '200% 100%' }} />
+                    <p className="text-xs text-amber-300/80 font-medium uppercase tracking-wider mb-1 relative z-10">პრიზი</p>
+                    <p className="text-2xl font-display font-bold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)] relative z-10">
+                      {prizeVouchers} x 100₾ ვაუჩერი
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <CardContent className="space-y-6 pt-4">
               <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-warning mb-2">
                   <Timer className="w-5 h-5" />
@@ -645,7 +596,7 @@ export default function TournamentQuiz() {
                 </div>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• მხოლოდ ერთი მცდელობა გაქვთ</li>
-                  <li>• თითო სწორი პასუხი: 10 ქულა</li>
+                  <li>• თითო სწორი პასუხი: {pointsPerQuestion} ქულა</li>
                   <li>• კითხვები: {questions.length}</li>
                 </ul>
               </div>
@@ -762,11 +713,11 @@ export default function TournamentQuiz() {
 
         {/* Navigation */}
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            className="flex-1" 
+          <Button
+            variant="outline"
+            className="flex-1"
             onClick={handleBack}
-            disabled={isFirstQuestion || (currentQuestionIndex > 0 && lockedQuestions.has(currentQuestionIndex - 1))}
+            disabled={isFirstQuestion}
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
             უკან
@@ -783,11 +734,10 @@ export default function TournamentQuiz() {
               გაგზავნა
             </Button>
           ) : (
-            <Button 
-              variant="default" 
-              className="flex-1" 
+            <Button
+              variant="default"
+              className="flex-1"
               onClick={handleNext}
-              disabled={!currentQuestion || !answers[currentQuestion.id] || !answers[currentQuestion.id].trim()}
             >
               შემდეგი
               <ChevronRight className="w-4 h-4 ml-1" />
@@ -798,26 +748,22 @@ export default function TournamentQuiz() {
         {/* Question dots */}
         <div className="flex justify-center gap-2 mt-6 flex-wrap">
           {questions.map((q, idx) => {
-            const isLocked = lockedQuestions.has(idx);
             const isCurrent = idx === currentQuestionIndex;
             const hasAnswer = answers[q.id] && answers[q.id].trim().length > 0;
-            
+
             return (
               <button
                 key={q.id}
                 onClick={() => handleQuestionDotClick(idx)}
-                disabled={isLocked}
                 className={`w-3 h-3 rounded-full transition-colors ${
                   isCurrent
                     ? 'bg-primary cursor-default'
-                    : isLocked
-                      ? 'bg-accent opacity-50 cursor-not-allowed'
-                      : hasAnswer
-                        ? 'bg-accent cursor-pointer'
-                        : 'bg-muted cursor-pointer'
+                    : hasAnswer
+                      ? 'bg-accent cursor-pointer'
+                      : 'bg-muted cursor-pointer'
                 }`}
-                aria-label={`კითხვა ${idx + 1}${isLocked ? ' (დაბლოკილი)' : ''}`}
-                title={isLocked ? 'თქვენ უკვე უპასუხეთ ამ კითხვას' : `კითხვა ${idx + 1}`}
+                aria-label={`კითხვა ${idx + 1}`}
+                title={`კითხვა ${idx + 1}`}
               />
             );
           })}

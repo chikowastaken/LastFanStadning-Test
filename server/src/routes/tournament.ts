@@ -319,17 +319,8 @@ router.post('/:id/submit', requireAuth, strictRateLimit, async (req: AuthRequest
       // Don't fail - submission is saved
     }
 
-    // 9. Update user's total points using RPC (CRITICAL FIX: Tournament points were not being added!)
-    try {
-      await supabaseAdmin.rpc('add_tournament_points', {
-        p_user_id: userId,
-        p_points_to_add: totalScore,
-        p_tournament_start_at: quiz.tournament_starts_at || quiz.start_at,
-      });
-    } catch (pointsError) {
-      console.error('Error updating tournament points:', pointsError);
-      // Don't fail - can reconcile later, but log the error
-    }
+    // 9. Tournament points are kept separate from global leaderboards
+    // Tournaments have their own leaderboard and don't affect daily quiz rankings
 
     // 10. Return result (no correct answers revealed yet!)
     res.json({
@@ -421,6 +412,7 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
           id: quiz.id,
           title: quiz.title,
           tournament_prize_gel: quiz.tournament_prize_gel,
+          tournament_starts_at: quiz.tournament_starts_at,
         },
         resultsReleased: false,
         durationSeconds: durationFromStart,
@@ -477,6 +469,7 @@ router.get('/:id/results', requireAuth, async (req: AuthRequest, res: Response) 
         id: quiz.id,
         title: quiz.title,
         tournament_prize_gel: quiz.tournament_prize_gel,
+        tournament_starts_at: quiz.tournament_starts_at,
       },
       resultsReleased: true,
       durationSeconds: durationFromStart,

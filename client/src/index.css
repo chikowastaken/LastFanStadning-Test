@@ -87,6 +87,20 @@
   }
 }
 
+/* Tournament Top 5 Glow Animation */
+.animate-top5-glow {
+  animation: top5-glow 2s ease-in-out infinite;
+}
+
+@keyframes top5-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px hsl(var(--accent) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px hsl(var(--accent) / 0.5);
+  }
+}
+
 @layer utilities {
   .font-display {
     font-family: 'Noto Sans Georgian', sans-serif;
@@ -229,5 +243,21 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Pulsing indicator for live tournaments */
+  .animate-pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
   }
 }

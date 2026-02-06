@@ -4,8 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CountdownTimer from "@/components/CountdownTimer";
-import { Trophy, Clock, Users, Lock, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { Trophy, Clock, Users, Lock, CheckCircle, ArrowRight, Loader2, AlertTriangle, Instagram, } from "lucide-react";
 import { format } from "date-fns";
+
+// Georgian month names
+const GEORGIAN_MONTHS = [
+    "იან", "თებ", "მარ", "აპრ", "მაი", "ივნ",
+    "ივლ", "აგვ", "სექ", "ოქტ", "ნოე", "დეკ"
+];
 
 interface Tournament {
     id: string;
@@ -66,11 +72,15 @@ const TournamentCard = memo(function TournamentCard({
 
     const statusBadge = getStatusBadge();
 
-    // Format date for display
+    // Format date for display with Georgian month
     const getDateDisplay = () => {
         if (tournament.tournament_starts_at) {
             try {
-                return format(new Date(tournament.tournament_starts_at), "dd MMM yyyy");
+                const date = new Date(tournament.tournament_starts_at);
+                const day = format(date, "dd");
+                const month = GEORGIAN_MONTHS[date.getMonth()];
+                const year = format(date, "yyyy");
+                return `${day} ${month} ${year}`;
             } catch {
                 return null;
             }
@@ -80,37 +90,54 @@ const TournamentCard = memo(function TournamentCard({
 
     const dateDisplay = getDateDisplay();
 
+    // Calculate prize vouchers (divide by 100)
+    const prizeVouchers = tournament.tournament_prize_gel ? Math.floor(tournament.tournament_prize_gel / 100) : 0;
+
     return (
         <Card
             variant="elevated"
-            className="relative overflow-hidden transition-all hover:scale-[1.02]"
+            className="relative overflow-hidden border-2 border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)]"
         >
-            {/* Status badge - top right (desktop only) */}
-            <div className="absolute top-4 right-4 z-10 hidden md:block">
+            {/* Status badge - top right */}
+            <div className="absolute top-4 right-4 z-10">
                 <Badge className={statusBadge.color}>{statusBadge.label}</Badge>
             </div>
 
-            <CardHeader>
-                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                    <Clock className="w-4 h-4" />
-                    {dateDisplay ? dateDisplay : tournament.day_number ? `დღე ${tournament.day_number}` : "ტურნირი"}
-                    {/* Status badge - inline (mobile only) */}
-                    <Badge className={`${statusBadge.color} md:hidden`}>{statusBadge.label}</Badge>
+            {/* Date - top left */}
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 text-muted-foreground text-sm bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md">
+                <Clock className="w-3.5 h-3.5" />
+                {dateDisplay ? dateDisplay : tournament.day_number ? `დღე ${tournament.day_number}` : "ტურნირი"}
+            </div>
+
+            {/* Hero section with trophy and prize */}
+            <div className="relative bg-gradient-to-b from-primary/15 via-primary/5 to-transparent pt-16 pb-6 px-6">
+                <div className="flex flex-col items-center text-center">
+                    {/* Glowing Trophy */}
+                    <div className="relative mb-4">
+                        <div className="absolute inset-0 blur-2xl bg-amber-400/30 rounded-full scale-150" />
+                        <Trophy className="w-20 h-20 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.5)] relative z-10" />
+                    </div>
+
+                    {/* Title and Description */}
+                    <CardTitle className="text-xl font-display font-bold mb-2">{tournament.title}</CardTitle>
+                    {tournament.description && (
+                        <p className="text-sm text-muted-foreground mb-4">{tournament.description}</p>
+                    )}
+
+                    {/* Fancy Prize Display with Shimmer */}
                     {tournament.tournament_prize_gel && (
-                        <>
-                            <span className="mx-1">•</span>
-                            <Trophy className="w-4 h-4 text-accent" />
-                            <span className="text-accent font-semibold whitespace-nowrap">{tournament.tournament_prize_gel} ₾</span>
-                        </>
+                        <div className="relative overflow-hidden bg-amber-500/10 border border-amber-400/40 rounded-xl px-6 py-3">
+                            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" style={{ backgroundSize: '200% 100%' }} />
+                            <p className="text-xs text-amber-300/80 font-medium uppercase tracking-wider mb-1 relative z-10">პრიზი</p>
+                            <p className="text-2xl font-display font-bold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)] relative z-10">
+                                {prizeVouchers} x 100₾ ვაუჩერი
+                            </p>
+                        </div>
                     )}
                 </div>
-                <CardTitle className="text-xl">{tournament.title}</CardTitle>
-                {tournament.description && (
-                    <CardDescription>{tournament.description}</CardDescription>
-                )}
-            </CardHeader>
+            </div>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
                 {/* Score display - similar to quiz cards */}
                 {hasSubmitted && score !== undefined && (
                     <div className="flex items-center justify-center gap-3 p-4 rounded-lg bg-success/10 border border-success/20">
@@ -257,6 +284,29 @@ const TournamentCard = memo(function TournamentCard({
                         შედეგების ნახვა
                     </Button>
                 )}
+
+                {/* Instagram follow notice */}
+                <div className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-orange-500/10 border border-pink-400/30 rounded-lg p-2.5 sm:p-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-warning flex-shrink-0 mt-0.5 md:mt-0" />
+                            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+                                <span className="font-semibold text-foreground">მნიშვნელოვანი:</span>{" "}
+                                გამარჯვებულებს ვაცხადებთ Instagram-ზე. პრიზის მისაღებად აუცილებელია გვერდის გამოწერა!
+                            </p>
+                        </div>
+                        <a
+                            href="https://www.instagram.com/lastfanstanding.ge"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-orange-500 text-white text-[11px] sm:text-xs font-bold hover:opacity-90 transition-opacity shadow-[0_0_10px_rgba(236,72,153,0.3)] flex-shrink-0 w-full sm:w-auto justify-center"
+                        >
+                            <Instagram className="w-3.5 h-3.5" />
+                            <span className="whitespace-nowrap">გამოგვყევი</span>
+                        </a>
+                    </div>
+                </div>
+
             </CardContent>
         </Card>
     );

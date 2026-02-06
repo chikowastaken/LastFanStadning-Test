@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Trophy, Zap, Users, Target, Star, Award, ArrowRight, Brain, BarChart3,
   Clock, Calendar, Gift, CheckCircle2,
-  HelpCircle, Play, Archive, Repeat
+  HelpCircle, Play, Archive, Repeat, X
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
@@ -17,7 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Footer from "@/components/Footer";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Animation variants for reusable animations
 const fadeInUp = {
@@ -43,6 +43,7 @@ const staggerContainer = {
 export default function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showBanner, setShowBanner] = useState(true);
 
   const handleStartGame = () => {
     if (user) {
@@ -114,7 +115,70 @@ export default function Landing() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-primary/5 to-transparent rounded-full" />
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
+        {/* banner */}
+        <AnimatePresence>
+          {showBanner && (
+            <motion.div
+              key="banner"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+              transition={{ duration: 0.5 }}
+              className="relative rounded-xl border border-yellow-400/40 bg-gradient-to-r from-yellow-500/15 via-amber-400/10 to-yellow-500/5 shadow-[0_0_25px_rgba(250,204,21,0.15)] overflow-hidden m-4 lg:mx-24"
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent" />
+              </div>
+
+              <button
+                onClick={() => setShowBanner(false)}
+                className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="relative p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                  {/* Trophy icon */}
+                  <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-yellow-400/30 to-amber-500/20 border border-yellow-400/30 flex items-center justify-center">
+                    <Trophy className="w-8 h-8 sm:w-9 sm:h-9 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <h3 className="font-display font-bold text-base sm:text-lg text-yellow-300">
+                      🎉 უფასო ტურნირი ამ შაბათს 21:00-ზე!
+                    </h3>
+
+                    {/* Prize badge */}
+                    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/25 to-amber-500/20 border border-yellow-400/40 rounded-full px-4 py-1.5">
+                      <Gift className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm font-bold text-yellow-300">
+                        🏆 5 x 100₾ City Mall ვაუჩერი
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      რეგისტრაცია სრულიად უფასოა! დარეგისტრირდი ახლავე და მოიგე პრიზები!
+                    </p>
+                  </div>
+
+                  {/* CTA */}
+                  <Link to="/dashboard?tab=tournaments" className="flex-shrink-0 w-full sm:w-auto">
+                    <Button size="lg" className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-base gap-2 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                      რეგისტრაცია
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative z-10 container mx-auto px-4 pb-20 pt-12">
           <div className="text-center max-w-4xl mx-auto">
             {/* Logo */}
             <div className="flex items-center justify-center mb-8 animate-scale-in">
