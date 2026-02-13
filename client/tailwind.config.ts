@@ -71,6 +71,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Kiss Marry Kill Colors
+        kiss: {
+          DEFAULT: "hsl(var(--kiss))",
+          foreground: "hsl(var(--foreground))",
+        },
+        marry: {
+          DEFAULT: "hsl(var(--marry))",
+          foreground: "hsl(var(--foreground))",
+        },
+        kill: {
+          DEFAULT: "hsl(var(--kill))",
+          foreground: "hsl(var(--foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -106,6 +119,14 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-5px)" },
         },
+        "scale-bounce": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+        },
+        "drop-pulse": {
+          "0%, 100%": { opacity: "0.4" }, // Matches KMKDropZone idle
+          "50%": { opacity: "0.8" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -115,6 +136,8 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
+        "scale-bounce": "scale-bounce 0.5s ease-in-out",
+        "drop-pulse": "drop-pulse 2s ease-in-out infinite",
       },
     },
   },

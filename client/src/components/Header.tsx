@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Trophy, Home, BarChart3, Settings, LogOut, Menu, X, User } from "lucide-react";
+import { Trophy, Home, BarChart3, Settings, LogOut, Menu, X, User, Heart } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 interface HeaderProps {
@@ -55,6 +55,9 @@ export default function Header({ showHeader = true }: HeaderProps) {
     items.push({ path: "/leaderboard", label: "რეიტინგი", icon: BarChart3 });
 
     items.push({ path: "/grand-tournament", label: "გრანდ ტურნირი", icon: Trophy });
+
+    // Kiss Marry Kill - visible for everyone
+    items.push({ path: "/kiss-marry-kill", label: "KMK", icon: Heart });
 
     // Profile - only for authenticated users
     if (user) {

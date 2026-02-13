@@ -22,6 +22,7 @@ import TournamentResults from "./pages/TournamentResults";
 import Profile from "./pages/Profile";
 import { ErrorBoundary } from "./components/ErrorBoundry";
 import GrandTournament from "./pages/GrandTournament";
+import KissMarryKill from "./pages/KissMarryKill";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import { SpeedInsights } from "@vercel/speed-insights/react"
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/grand-tournament" element={<GrandTournament />} />
+              <Route path="/kiss-marry-kill" element={<KissMarryKill />} />
               <Route path="/quiz/:id" element={<Quiz />} />
               <Route path="/quiz/:id/results" element={<QuizResults />} />
               <Route path="/tournament/:id" element={<TournamentQuiz />} />

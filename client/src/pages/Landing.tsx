@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Trophy, Zap, Users, Target, Star, Award, ArrowRight, Brain, BarChart3,
   Clock, Calendar, Gift, CheckCircle2,
-  HelpCircle, Play, Archive, Repeat, X
+  X, HelpCircle, Play, Archive, Repeat, Heart
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
@@ -17,6 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Footer from "@/components/Footer";
+import { KMKBanner } from "@/components/kmk/KMKBanner";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Animation variants for reusable animations
@@ -177,6 +178,14 @@ export default function Landing() {
             </motion.div>
           )}
         </AnimatePresence>
+
+
+        {/* Kiss Marry Kill Mini-Game CTA */}
+        <section className="py-8">
+          <div className="m-4 lg:mx-24">
+            <KMKBanner onPlay={() => navigate('/kiss-marry-kill')} />
+          </div>
+        </section>
 
         <div className="relative z-10 container mx-auto px-4 pb-20 pt-12">
           <div className="text-center max-w-4xl mx-auto">
