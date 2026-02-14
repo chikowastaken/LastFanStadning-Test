@@ -30,6 +30,7 @@ export default function KissMarryKill() {
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [allCharacters, setAllCharacters] = useState<KMKCharacter[]>([]);
   const [gameState, setGameState] = useState<KMKGameState>(INITIAL_GAME_STATE);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const STORAGE_KEY = 'kmk_game_state_v2';
@@ -47,6 +48,7 @@ export default function KissMarryKill() {
         if (parsed.gameState && parsed.screen) {
           setGameState(parsed.gameState);
           setScreen(parsed.screen);
+          setSessionId(parsed.sessionId || null);
           // If we restored, we might not need to fetch all characters if we have them in gameState?
           // But 'allCharacters' state is separate. We should still fetch them or store them?
           // Actually, 'allCharacters' is only used for initial selection.
@@ -62,12 +64,12 @@ export default function KissMarryKill() {
   // Save state to local storage whenever it changes
   useEffect(() => {
     if (gameState !== INITIAL_GAME_STATE && screen !== 'loading' && screen !== 'gender-select') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ gameState, screen }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ gameState, screen, sessionId }));
     } else if (screen === 'gender-select') {
       // Clear storage if we are back at start
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [gameState, screen]);
+  }, [gameState, screen, sessionId]);
 
   // Fetch characters on mount
   useEffect(() => {
@@ -96,8 +98,48 @@ export default function KissMarryKill() {
     }
   }, [user]);
 
+  const mapPreferenceForDb = (preference: KMKPreference): 'male' | 'female' | 'both' => {
+    if (preference === 'boy') return 'female';
+    if (preference === 'girl') return 'male';
+    return 'both';
+  };
+
+  const createGameSession = async (preference: KMKPreference): Promise<string | null> => {
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('kmk_game_sessions')
+      .insert({
+        user_id: user.id,
+        gender_preference: mapPreferenceForDb(preference),
+        completed_rounds: 0,
+        total_rounds: TOTAL_ROUNDS,
+        is_completed: false,
+      } as any)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Failed to create KMK session:', error);
+      return null;
+    }
+
+    return data?.id ?? null;
+  };
+
+  const ensureSessionId = async (): Promise<string | null> => {
+    if (sessionId) return sessionId;
+    if (!gameState.preference) return null;
+
+    const newSessionId = await createGameSession(gameState.preference);
+    if (newSessionId) {
+      setSessionId(newSessionId);
+    }
+    return newSessionId;
+  };
+
   // Handle gender preference selection
-  const handlePreferenceSelect = (preference: KMKPreference) => {
+  const handlePreferenceSelect = async (preference: KMKPreference) => {
     const selectedCharacters = selectGameCharacters(allCharacters, preference);
 
     const newGameState = {
@@ -109,11 +151,12 @@ export default function KissMarryKill() {
 
     setGameState(newGameState);
     setScreen('playing');
-    // Save immediately is handled by useEffect
+    const newSessionId = await createGameSession(preference);
+    setSessionId(newSessionId);
   };
 
   // Handle round completion
-  const handleRoundComplete = (choices: Record<string, KMKChoice>) => {
+  const handleRoundComplete = async (choices: Record<string, KMKChoice>) => {
     const currentCharacters = getRoundCharacters(
       gameState.characters,
       gameState.currentRound
@@ -126,6 +169,37 @@ export default function KissMarryKill() {
     };
 
     const newResults = [...gameState.results, roundResult];
+    const completedRound = gameState.currentRound;
+    const isCompleted = completedRound === TOTAL_ROUNDS;
+
+    const activeSessionId = await ensureSessionId();
+    if (activeSessionId) {
+      const choiceRows = Object.entries(choices).map(([characterId, choice]) => ({
+        session_id: activeSessionId,
+        character_id: characterId,
+        choice,
+      }));
+
+      const { error: insertChoicesError } = await supabase
+        .from('kmk_choices')
+        .insert(choiceRows as any);
+
+      if (insertChoicesError) {
+        console.error('Failed to insert KMK choices:', insertChoicesError);
+      }
+
+      const { error: updateSessionError } = await supabase
+        .from('kmk_game_sessions')
+        .update({
+          completed_rounds: completedRound,
+          is_completed: isCompleted,
+        } as any)
+        .eq('id', activeSessionId);
+
+      if (updateSessionError) {
+        console.error('Failed to update KMK session:', updateSessionError);
+      }
+    }
 
     if (gameState.currentRound === TOTAL_ROUNDS) {
       // Game complete
@@ -147,6 +221,7 @@ export default function KissMarryKill() {
   // Handle replay
   const handleReplay = () => {
     localStorage.removeItem(STORAGE_KEY);
+    setSessionId(null);
     setGameState(INITIAL_GAME_STATE);
     setScreen('gender-select');
   };
